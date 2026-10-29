@@ -54,3 +54,13 @@ AI assistance: Codex designed the fixed-clock boundary case and traced the cutof
 - **Your side-effect check:** All five supplied search tests passed: title/artist matches, songs with zero tags, one tag, or multiple tags, and an unmatched search. The three-tag regression is `tests/test_search.py:test_search_no_duplicates_multi_tag_song`; it existed in the starter and was not authored for this submission.
 
 AI assistance: Codex explained join row multiplication and result uniquing; the real HTTP response and passing service tests verified the explanation.
+
+**Issue #4 — I got notified when a friend added my song to a playlist but not when they rated it**
+
+- **How you reproduced it:** Before changes, posted a friend's 5-star rating via the Flask test client. The rating endpoint returned 201, but the sharer's notification list was empty; the new test failed at the expected first notification.
+- **How you found the root cause:** Followed `routes/songs.py:rate()` into `services/notification_service.py:rate_song()`. Compared it with `add_to_playlist()` in the same module and followed `create_notification()` and `get_notifications()`. The playlist path explicitly creates a notification after saving the interaction; the rating path ended immediately after saving the rating.
+- **The root cause:** Saving a `Rating` row does not automatically generate a `Notification`. There is no model hook or event subscriber to do that, and `rate_song()` never called the shared notification function, so there was nothing for notification retrieval to return.
+- **Your fix:** After persisting either a new or updated rating, explicitly call `create_notification()` for the song's original sharer with type `song_rated` and a message identifying the rater, song, and score. Follow the playlist path's self-interaction guard so users do not notify themselves. Updated ratings are treated as rating interactions and also notify the sharer.
+- **Your side-effect check:** `tests/test_notifications.py` passed through HTTP endpoints: initial notification contents/recipient, mark-as-read and unread filtering, updated score on the same Rating row, a notification for the update, no self-notification, no notification to the rater, and invalid score/missing-user/missing-song rejection without extra notifications. Playlist notifications are checked with Issue #5's add/refetch regression.
+
+AI assistance: Codex compared the two write paths and identified the absent notification call; the stored rating and notification assertions verified the architectural explanation.
