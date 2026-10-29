@@ -94,3 +94,16 @@ def test_streak_increments_on_sunday(app, user):
 
         update_listening_streak(u, sunday)
         assert u.listening_streak == 2  # Should increment, not reset
+
+
+@pytest.mark.parametrize('day', range(7))
+def test_existing_streak_continues_across_every_weekday(app, user, day):
+    """A 12-day streak continues across every day boundary, including Sunday."""
+    with app.app_context():
+        today = datetime(2026, 10, 12, 9, tzinfo=timezone.utc) + timedelta(days=day)
+        user.last_listened_at = today - timedelta(days=1)
+        user.listening_streak = 12
+        update_listening_streak(user, today)
+        assert user.listening_streak == 13
+        update_listening_streak(user, today + timedelta(hours=1))
+        assert user.listening_streak == 13

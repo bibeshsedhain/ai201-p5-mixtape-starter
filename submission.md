@@ -24,3 +24,13 @@ Blueprints keep HTTP parsing and response formatting near the endpoints; service
 ## Root cause analyses
 
 Entries below are added as each fix is verified.
+
+**Issue #1 — My listening streak keeps resetting**
+
+- **How you reproduced it:** Before changing the service, the supplied Saturday June 15 → Sunday June 16, 2024 test returned 1 instead of 2. A new parametrized regression set a previous streak to 12 and listened on the next day for each weekday: Sunday returned 1 rather than 13 while the other six days passed.
+- **How you found the root cause:** Followed `routes/songs.py:listen()` → `record_listening_event()` → `update_listening_streak()` in `services/streak_service.py`; `routes/users.py:streak()` only retrieves the stored value. The controlled dates isolated the decision that increments the stored streak.
+- **The root cause:** The consecutive-day branch required both `days_since_last == 1` and `today.weekday() != 6`. Python numbers Sunday as 6, so consecutive Sunday listens fell into the reset branch even though exactly one calendar day had elapsed.
+- **Your fix:** Removed the weekday restriction. Consecutive calendar dates now increment on every day of the week.
+- **Your side-effect check:** All 12 streak tests passed: first listen, ordinary consecutive days, same-day repeats, skipped days, the original Sunday case, and the new seven-weekday regression in `tests/test_streaks.py:test_existing_streak_continues_across_every_weekday`.
+
+AI assistance: Codex traced the route/service calls, explained the weekday condition, and implemented the change; the before/after tests verified the diagnosis.
