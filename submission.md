@@ -74,3 +74,16 @@ AI assistance: Codex compared the two write paths and identified the absent noti
 - **Your side-effect check:** All four playlist tests passed: existing five-song count/order, empty playlist, and the new `tests/test_playlist_boundaries.py:test_empty_single_song_and_append_are_visible_in_order`. The HTTP test covers empty→one→two songs, immediate visibility of the newest song, stable order and contributor metadata, duplicate addition without another association, and the working playlist-add notification.
 
 AI assistance: Codex traced both retrieval and addition. Reading alone suggested the return slice, but the HTTP reproduction exposed the additional database constraint failure; the fix was expanded only after that executable evidence.
+
+## Final verification and submission
+
+- Branch: `bugfix/mixtape`.
+- Branch URL: https://github.com/bibeshsedhain/ai201-p5-mixtape-starter/tree/bugfix/mixtape
+- Final command: `.venv/bin/python -m pytest tests/ -q` — **23 passed**.
+- `git diff --check` passed.
+- Started the app with `FLASK_APP=app:create_app .venv/bin/flask run` and confirmed the search endpoint responds at `http://127.0.0.1:5000`.
+- Five separate `fix:` commits cover Issues #1–#5; the earlier documentation commit records orientation before bug work.
+- New regression coverage: seven weekday boundaries in `tests/test_streaks.py`, UTC midnight/feed behavior in `tests/test_feed.py`, rating notifications in `tests/test_notifications.py`, and playlist add/refetch boundaries in `tests/test_playlist_boundaries.py`.
+- [Commit-history screenshot](evidence/git-log.png) shows the actual captured branch name, `git log --oneline -7` output, and passing test output. It is a browser screenshot of the saved command output because direct Terminal screenshot access was unavailable. The unmodified captured text is in [evidence/git-log.txt](evidence/git-log.txt).
+
+Review this AI-assisted work and the explanations before submitting the branch URL and screenshot through the course portal. Portal submission has not been performed.
