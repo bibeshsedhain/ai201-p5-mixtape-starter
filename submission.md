@@ -44,3 +44,13 @@ AI assistance: Codex traced the route/service calls, explained the weekday condi
 - **Your side-effect check:** `tests/test_feed.py` passed. It excludes one second before midnight, includes exactly midnight, keeps only the latest event per friend, excludes a nonfriend, returns an empty list for a user without friends and 404 for a missing user. The general activity endpoint still includes the historical event.
 
 AI assistance: Codex designed the fixed-clock boundary case and traced the cutoff; executable assertions confirmed both the bug and the preserved activity behavior.
+
+**Issue #3 — The same song keeps showing up twice in search**
+
+- **How you reproduced it:** Before any application fixes, ran the Flask server and requested `GET /songs/search?q=Anthem`: HTTP 200 contained three copies of the same Crown Heights Anthem song ID, with all three tags on every copy. The supplied multi-tag search test also failed with 3 matches instead of 1, while zero/one-tag cases passed.
+- **How you found the root cause:** Followed `routes/songs.py:search()` → `services/search_service.py:search_songs()`, then checked `models.py` for the song/tag association and `Song.to_dict()`. The query outer-joined `song_tags`; inspecting the scalar result handling showed that it did not remove repeated song identities.
+- **The root cause:** A song with three tag associations creates three joined SQL rows. `execute(select(Song)...).scalars().all()` retains each row's song occurrence, so serialization produces identical copies. The zero-tag outer-join row and the single-tag row explain why the symptom is conditional.
+- **Your fix:** Added `.unique()` to the scalar result before collecting it. SQLAlchemy now yields each song identity once, preserving matching and tag serialization.
+- **Your side-effect check:** All five supplied search tests passed: title/artist matches, songs with zero tags, one tag, or multiple tags, and an unmatched search. The three-tag regression is `tests/test_search.py:test_search_no_duplicates_multi_tag_song`; it existed in the starter and was not authored for this submission.
+
+AI assistance: Codex explained join row multiplication and result uniquing; the real HTTP response and passing service tests verified the explanation.
