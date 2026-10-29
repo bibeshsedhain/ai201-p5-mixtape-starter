@@ -34,3 +34,13 @@ Entries below are added as each fix is verified.
 - **Your side-effect check:** All 12 streak tests passed: first listen, ordinary consecutive days, same-day repeats, skipped days, the original Sunday case, and the new seven-weekday regression in `tests/test_streaks.py:test_existing_streak_continues_across_every_weekday`.
 
 AI assistance: Codex traced the route/service calls, explained the weekday condition, and implemented the change; the before/after tests verified the diagnosis.
+
+**Issue #2 — Friends Listening Now shows people from yesterday**
+
+- **How you reproduced it:** Added a controlled HTTP regression with the service clock fixed at October 15, 2026, 09:00 UTC and a friend's only listen at October 14, 23:59:59 UTC. Before the fix, `GET /feed/<owner>/listening-now` returned count 1 instead of 0.
+- **How you found the root cause:** Traced `routes/feed.py:listening_now()` to `services/feed_service.py:get_friends_listening_now()`, inspected the timestamp filter, and compared the separately implemented activity feed. The frozen-clock case proved that a previous-date event passed the listening-now cutoff.
+- **The root cause:** The cutoff was the current instant minus 24 hours, making the feed a rolling window. At 09:00 it still included yesterday's late-night listens, rather than restricting results to today's calendar date.
+- **Your fix:** Replaced the rolling cutoff with midnight of the current UTC day and clarified the service docstring. UTC follows the existing timestamp convention; the models contain no per-user timezone setting.
+- **Your side-effect check:** `tests/test_feed.py` passed. It excludes one second before midnight, includes exactly midnight, keeps only the latest event per friend, excludes a nonfriend, returns an empty list for a user without friends and 404 for a missing user. The general activity endpoint still includes the historical event.
+
+AI assistance: Codex designed the fixed-clock boundary case and traced the cutoff; executable assertions confirmed both the bug and the preserved activity behavior.
